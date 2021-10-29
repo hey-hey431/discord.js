@@ -1,12 +1,8 @@
 'use strict';
 
 const Action = require('./Action');
-const AutocompleteInteraction = require('../../structures/AutocompleteInteraction');
-const ButtonInteraction = require('../../structures/ButtonInteraction');
-const CommandInteraction = require('../../structures/CommandInteraction');
-const ContextMenuInteraction = require('../../structures/ContextMenuInteraction');
-const SelectMenuInteraction = require('../../structures/SelectMenuInteraction');
 const { Events, InteractionTypes, MessageComponentTypes, ApplicationCommandTypes } = require('../../util/Constants');
+const Structures = require('../../util/Structures');
 
 let deprecationEmitted = false;
 
@@ -22,11 +18,11 @@ class InteractionCreateAction extends Action {
       case InteractionTypes.APPLICATION_COMMAND:
         switch (data.data.type) {
           case ApplicationCommandTypes.CHAT_INPUT:
-            InteractionType = CommandInteraction;
+            InteractionType = Structures.get('CommandInteraction');
             break;
           case ApplicationCommandTypes.USER:
           case ApplicationCommandTypes.MESSAGE:
-            InteractionType = ContextMenuInteraction;
+            InteractionType = Structures.get('ContextMenuInteraction');
             break;
           default:
             client.emit(
@@ -39,10 +35,10 @@ class InteractionCreateAction extends Action {
       case InteractionTypes.MESSAGE_COMPONENT:
         switch (data.data.component_type) {
           case MessageComponentTypes.BUTTON:
-            InteractionType = ButtonInteraction;
+            InteractionType = Structures.get('ButtonInteraction');
             break;
           case MessageComponentTypes.SELECT_MENU:
-            InteractionType = SelectMenuInteraction;
+            InteractionType = Structures.get('SelectMenuInteraction');
             break;
           default:
             client.emit(
@@ -53,7 +49,7 @@ class InteractionCreateAction extends Action {
         }
         break;
       case InteractionTypes.APPLICATION_COMMAND_AUTOCOMPLETE:
-        InteractionType = AutocompleteInteraction;
+        InteractionType = Structures.get('AutocompleteInteraction');
         break;
       default:
         client.emit(Events.DEBUG, `[INTERACTION] Received interaction with unknown type: ${data.type}`);
