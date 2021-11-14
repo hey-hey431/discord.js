@@ -265,6 +265,39 @@ export class BaseClient extends EventEmitter {
   private decrementMaxListeners(): void;
   private incrementMaxListeners(): void;
 
+  public on<K extends keyof BaseClientEvents>(
+    event: K,
+    listener: (...args: BaseClientEvents[K]) => Awaitable<void>,
+  ): this;
+  public on<S extends string | symbol>(
+    event: Exclude<S, keyof BaseClientEvents>,
+    listener: (...args: any[]) => Awaitable<void>,
+  ): this;
+
+  public once<K extends keyof BaseClientEvents>(
+    event: K,
+    listener: (...args: BaseClientEvents[K]) => Awaitable<void>,
+  ): this;
+  public once<S extends string | symbol>(
+    event: Exclude<S, keyof BaseClientEvents>,
+    listener: (...args: any[]) => Awaitable<void>,
+  ): this;
+
+  public emit<K extends keyof BaseClientEvents>(event: K, ...args: BaseClientEvents[K]): boolean;
+  public emit<S extends string | symbol>(event: Exclude<S, keyof BaseClientEvents>, ...args: unknown[]): boolean;
+
+  public off<K extends keyof BaseClientEvents>(
+    event: K,
+    listener: (...args: BaseClientEvents[K]) => Awaitable<void>,
+  ): this;
+  public off<S extends string | symbol>(
+    event: Exclude<S, keyof BaseClientEvents>,
+    listener: (...args: any[]) => Awaitable<void>,
+  ): this;
+
+  public removeAllListeners<K extends keyof BaseClientEvents>(event?: K): this;
+  public removeAllListeners<S extends string | symbol>(event?: Exclude<S, keyof BaseClientEvents>): this;
+
   public options: ClientOptions | WebhookClientOptions;
   public destroy(): void;
   public toJSON(...props: Record<string, boolean | string>[]): unknown;
@@ -1144,11 +1177,11 @@ export type CacheTypeReducer<
   RawType = CachedType,
   PresentType = CachedType | RawType,
   Fallback = PresentType | null,
-> = State extends 'cached'
+> = [State] extends ['cached']
   ? CachedType
-  : State extends 'raw'
+  : [State] extends ['raw']
   ? RawType
-  : State extends 'present'
+  : [State] extends ['present']
   ? PresentType
   : Fallback;
 
@@ -2626,8 +2659,7 @@ export class ApplicationCommandManager<
     null
   >;
   private commandPath({ id, guildId }: { id?: Snowflake; guildId?: Snowflake }): unknown;
-  public create(command: ApplicationCommandDataResolvable): Promise<ApplicationCommandScope>;
-  public create(command: ApplicationCommandDataResolvable, guildId: Snowflake): Promise<ApplicationCommand>;
+  public create(command: ApplicationCommandDataResolvable, guildId?: Snowflake): Promise<ApplicationCommandScope>;
   public delete(command: ApplicationCommandResolvable, guildId?: Snowflake): Promise<ApplicationCommandScope | null>;
   public edit(
     command: ApplicationCommandResolvable,
@@ -3272,10 +3304,13 @@ export type CommandOptionDataTypeResolvable = ApplicationCommandOptionType | App
 export type CommandOptionChannelResolvableType = ApplicationCommandOptionTypes.CHANNEL | 'CHANNEL';
 
 export type CommandOptionChoiceResolvableType =
-  | ApplicationCommandOptionTypes.NUMBER
-  | 'NUMBER'
   | ApplicationCommandOptionTypes.STRING
   | 'STRING'
+  | CommandOptionNumericResolvableType;
+
+export type CommandOptionNumericResolvableType =
+  | ApplicationCommandOptionTypes.NUMBER
+  | 'NUMBER'
   | ApplicationCommandOptionTypes.INTEGER
   | 'INTEGER';
 
@@ -3294,7 +3329,6 @@ export interface BaseApplicationCommandOptionsData {
   name: string;
   description: string;
   required?: boolean;
-  autocomplete?: boolean;
 }
 
 export interface UserApplicationCommandData extends BaseApplicationCommandData {
@@ -3327,14 +3361,41 @@ export interface ApplicationCommandChannelOption extends BaseApplicationCommandO
   channelTypes?: (keyof typeof ChannelTypes)[];
 }
 
+export interface ApplicationCommandAutocompleteOption extends BaseApplicationCommandOptionsData {
+  type:
+    | 'STRING'
+    | 'NUMBER'
+    | 'INTEGER'
+    | ApplicationCommandOptionTypes.STRING
+    | ApplicationCommandOptionTypes.NUMBER
+    | ApplicationCommandOptionTypes.INTEGER;
+  autocomplete: true;
+}
+
 export interface ApplicationCommandChoicesData extends BaseApplicationCommandOptionsData {
   type: CommandOptionChoiceResolvableType;
   choices?: ApplicationCommandOptionChoice[];
+  autocomplete?: false;
 }
 
 export interface ApplicationCommandChoicesOption extends BaseApplicationCommandOptionsData {
   type: Exclude<CommandOptionChoiceResolvableType, ApplicationCommandOptionTypes>;
   choices?: ApplicationCommandOptionChoice[];
+  autocomplete?: false;
+}
+
+export interface ApplicationCommandNumericOptionData extends ApplicationCommandChoicesData {
+  type: CommandOptionNumericResolvableType;
+  minValue?: number;
+  min_value?: number;
+  maxValue?: number;
+  max_value?: number;
+}
+
+export interface ApplicationCommandNumericOption extends ApplicationCommandChoicesOption {
+  type: Exclude<CommandOptionNumericResolvableType, ApplicationCommandOptionTypes>;
+  minValue?: number;
+  maxValue?: number;
 }
 
 export interface ApplicationCommandSubGroupData extends Omit<BaseApplicationCommandOptionsData, 'required'> {
@@ -3370,6 +3431,8 @@ export type ApplicationCommandOptionData =
   | ApplicationCommandNonOptionsData
   | ApplicationCommandChannelOptionData
   | ApplicationCommandChoicesData
+  | ApplicationCommandAutocompleteOption
+  | ApplicationCommandNumericOptionData
   | ApplicationCommandSubCommandData;
 
 export type ApplicationCommandOption =
@@ -3377,6 +3440,7 @@ export type ApplicationCommandOption =
   | ApplicationCommandNonOptions
   | ApplicationCommandChannelOption
   | ApplicationCommandChoicesOption
+  | ApplicationCommandNumericOption
   | ApplicationCommandSubCommand;
 
 export interface ApplicationCommandOptionChoice {
@@ -3569,9 +3633,15 @@ export interface ChannelWebhookCreateOptions {
   reason?: string;
 }
 
-export interface ClientEvents {
+export interface BaseClientEvents {
   apiResponse: [request: APIRequest, response: Response];
   apiRequest: [request: APIRequest];
+  debug: [message: string];
+  rateLimit: [rateLimitData: RateLimitData];
+  invalidRequestWarning: [invalidRequestWarningData: InvalidRequestWarningData];
+}
+
+export interface ClientEvents extends BaseClientEvents {
   /** @deprecated See [this issue](https://github.com/discord/discord-api-docs/issues/3690) for more information. */
   applicationCommandCreate: [command: ApplicationCommand];
   /** @deprecated See [this issue](https://github.com/discord/discord-api-docs/issues/3690) for more information. */
@@ -3582,7 +3652,6 @@ export interface ClientEvents {
   channelDelete: [channel: DMChannel | GuildChannel];
   channelPinsUpdate: [channel: TextBasedChannels, date: Date];
   channelUpdate: [oldChannel: DMChannel | GuildChannel, newChannel: DMChannel | GuildChannel];
-  debug: [message: string];
   warn: [message: string];
   emojiCreate: [emoji: GuildEmoji];
   emojiDelete: [emoji: GuildEmoji];
@@ -3620,8 +3689,6 @@ export interface ClientEvents {
   messageReactionRemove: [reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser];
   messageUpdate: [oldMessage: Message | PartialMessage, newMessage: Message | PartialMessage];
   presenceUpdate: [oldPresence: Presence | null, newPresence: Presence];
-  rateLimit: [rateLimitData: RateLimitData];
-  invalidRequestWarning: [invalidRequestWarningData: InvalidRequestWarningData];
   ready: [client: Client<true>];
   invalidated: [];
   roleCreate: [role: Role];
@@ -4095,6 +4162,7 @@ export interface FetchThreadsOptions {
 export interface FileOptions {
   attachment: BufferResolvable | Stream;
   name?: string;
+  description?: string;
 }
 
 export interface GuildApplicationCommandPermissionData {
@@ -5021,7 +5089,8 @@ export type StickerType = keyof typeof StickerTypes;
 export type SystemChannelFlagsString =
   | 'SUPPRESS_JOIN_NOTIFICATIONS'
   | 'SUPPRESS_PREMIUM_SUBSCRIPTIONS'
-  | 'SUPPRESS_GUILD_REMINDER_NOTIFICATIONS';
+  | 'SUPPRESS_GUILD_REMINDER_NOTIFICATIONS'
+  | 'SUPPRESS_JOIN_NOTIFICATION_REPLIES';
 
 export type SystemChannelFlagsResolvable = BitFieldResolvable<SystemChannelFlagsString, number>;
 
