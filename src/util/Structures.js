@@ -124,6 +124,8 @@ const structures = {
   ButtonInteraction: require('../structures/ButtonInteraction'),
   SelectMenuInteraction: require('../structures/SelectMenuInteraction'),
   ContextMenuInteraction: require('../structures/ContextMenuInteraction'),
+  MessageContextMenuInteraction: require('../structures/MessageContextMenuInteraction'),
+  UserContextMenuInteraction: require('../structures/UserContextMenuInteraction'),
   AutocompleteInteraction: require('../structures/AutocompleteInteraction'),
   MessageComponentInteraction: require('../structures/MessageComponentInteraction'),
   StageInstance: require('../structures/StageInstance'),
