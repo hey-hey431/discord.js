@@ -9,12 +9,11 @@ class MessageDeleteAction extends Action {
     const channel = this.getChannel(data);
     let message;
     if (channel) {
-      if (!channel.isText()) return {};
+      if (!channel.isTextBased()) return {};
 
       message = this.getMessage(data, channel);
       if (message) {
         channel.messages.cache.delete(message.id);
-        message.deleted = true;
         /**
          * Emitted whenever a message is deleted.
          * @event Client#messageDelete

@@ -1,9 +1,11 @@
 'use strict';
 
 const EventEmitter = require('node:events');
+const { setTimeout, setInterval, clearTimeout, clearInterval } = require('node:timers');
+const { GatewayIntentBits } = require('discord-api-types/v9');
 const WebSocket = require('../../WebSocket');
 const { Status, Events, ShardEvents, Opcodes, WSEvents } = require('../../util/Constants');
-const Intents = require('../../util/Intents');
+const IntentsBitField = require('../../util/IntentsBitField');
 
 const STATUS_KEYS = Object.keys(Status);
 const CONNECTION_STATE = Object.keys(WebSocket.WebSocket);
@@ -474,13 +476,21 @@ class WebSocketShard extends EventEmitter {
       this.emit(ShardEvents.ALL_READY);
       return;
     }
-    const hasGuildsIntent = new Intents(this.manager.client.options.intents).has(Intents.FLAGS.GUILDS);
-    // Step 2. Create a 15s timeout that will mark the shard as ready if there are still unavailable guilds
+    const hasGuildsIntent = new IntentsBitField(this.manager.client.options.intents).has(GatewayIntentBits.Guilds);
+    // Step 2. Create a timeout that will mark the shard as ready if there are still unavailable guilds
+    // * The timeout is 15 seconds by default
+    // * This can be optionally changed in the client options via the `waitGuildTimeout` option
+    // * a timeout time of zero will skip this timeout, which potentially could cause the Client to miss guilds.
+
+    const { waitGuildTimeout } = this.manager.client.options;
+
     this.readyTimeout = setTimeout(
       () => {
         this.debug(
           `Shard ${hasGuildsIntent ? 'did' : 'will'} not receive any more guild packets` +
-            `${hasGuildsIntent ? ' in 15 seconds' : ''}.\n   Unavailable guild count: ${this.expectedGuilds.size}`,
+            `${hasGuildsIntent ? ` in ${waitGuildTimeout} ms` : ''}.\nUnavailable guild count: ${
+              this.expectedGuilds.size
+            }`,
         );
 
         this.readyTimeout = null;
@@ -489,7 +499,7 @@ class WebSocketShard extends EventEmitter {
 
         this.emit(ShardEvents.ALL_READY, this.expectedGuilds);
       },
-      hasGuildsIntent ? 15_000 : 0,
+      hasGuildsIntent ? waitGuildTimeout : 0,
     ).unref();
   }
 
@@ -601,7 +611,7 @@ class WebSocketShard extends EventEmitter {
     // Clone the identify payload and assign the token and shard info
     const d = {
       ...client.options.ws,
-      intents: Intents.resolve(client.options.intents),
+      intents: IntentsBitField.resolve(client.options.intents),
       token: client.token,
       shard: [this.id, Number(client.options.shardCount)],
     };

@@ -22,12 +22,14 @@
  * * **`VoiceState`**
  * * **`Role`**
  * * **`User`**
- * * **`BaseCommandInteraction`**
  * * **`CommandInteraction`**
+ * * **`ChatInputCommandInteraction`**
  * * **`ButtonInteraction`**
  * * **`StageInstance`**
  * * **`SelectMenuInteraction`**
- * * **`ContextMenuInteraction`**
+ * * **`ContextMenuCommandInteraction`**
+ * * **`MessageContextMenuInteraction`**
+ * * **`UserContextMenuInteraction`**
  * * **`AutocompleteInteraction`**
  * * **`MessageComponentInteraction`**
  * @typedef {string} ExtendableStructure
@@ -119,16 +121,17 @@ const structures = {
   VoiceState: require('../structures/VoiceState'),
   Role: require('../structures/Role'),
   User: require('../structures/User'),
-  BaseCommandInteraction: require('../structures/BaseCommandInteraction'),
   CommandInteraction: require('../structures/CommandInteraction'),
+  ChatInputCommandInteraction: require('../structures/ChatInputCommandInteraction'),
   ButtonInteraction: require('../structures/ButtonInteraction'),
   SelectMenuInteraction: require('../structures/SelectMenuInteraction'),
-  ContextMenuInteraction: require('../structures/ContextMenuInteraction'),
+  ContextMenuCommandInteraction: require('../structures/ContextMenuCommandInteraction'),
   MessageContextMenuInteraction: require('../structures/MessageContextMenuInteraction'),
   UserContextMenuInteraction: require('../structures/UserContextMenuInteraction'),
   AutocompleteInteraction: require('../structures/AutocompleteInteraction'),
   MessageComponentInteraction: require('../structures/MessageComponentInteraction'),
   StageInstance: require('../structures/StageInstance'),
+  GuildScheduledEvent: require('../structures/GuildScheduledEvent'),
 };
 
 module.exports = Structures;

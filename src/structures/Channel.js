@@ -1,8 +1,9 @@
 'use strict';
 
+const { DiscordSnowflake } = require('@sapphire/snowflake');
+const { ChannelType, Routes } = require('discord-api-types/v9');
 const Base = require('./Base');
-const { ChannelTypes, ThreadChannelTypes, VoiceBasedChannelTypes } = require('../util/Constants');
-const SnowflakeUtil = require('../util/SnowflakeUtil');
+const { ThreadChannelTypes } = require('../util/Constants');
 
 /**
  * Represents any channel on Discord.
@@ -13,18 +14,11 @@ class Channel extends Base {
   constructor(client, data, immediatePatch = true) {
     super(client);
 
-    const type = ChannelTypes[data?.type];
     /**
      * The type of the channel
      * @type {ChannelType}
      */
-    this.type = type ?? 'UNKNOWN';
-
-    /**
-     * Whether the channel has been deleted
-     * @type {boolean}
-     */
-    this.deleted = false;
+    this.type = data.type;
 
     if (data && immediatePatch) this._patch(data);
   }
@@ -43,7 +37,7 @@ class Channel extends Base {
    * @readonly
    */
   get createdTimestamp() {
-    return SnowflakeUtil.deconstruct(this.id).timestamp;
+    return DiscordSnowflake.timestampFrom(this.id);
   }
 
   /**
@@ -86,7 +80,7 @@ class Channel extends Base {
    *   .catch(console.error);
    */
   async delete() {
-    await this.client.api.channels(this.id).delete();
+    await this.client.rest.delete(Routes.channel(this.id));
     return this;
   }
 
@@ -100,19 +94,59 @@ class Channel extends Base {
   }
 
   /**
-   * Indicates whether this channel is {@link TextBasedChannels text-based}.
+   * Indicates whether this channel is a {@link TextChannel}.
    * @returns {boolean}
    */
   isText() {
-    return 'messages' in this;
+    return this.type === ChannelType.GuildText;
   }
 
   /**
-   * Indicates whether this channel is {@link BaseGuildVoiceChannel voice-based}.
+   * Indicates whether this channel is a {@link DMChannel}.
+   * @returns {boolean}
+   */
+  isDM() {
+    return this.type === ChannelType.DM;
+  }
+
+  /**
+   * Indicates whether this channel is a {@link VoiceChannel}.
    * @returns {boolean}
    */
   isVoice() {
-    return VoiceBasedChannelTypes.includes(this.type);
+    return this.type === ChannelType.GuildVoice;
+  }
+
+  /**
+   * Indicates whether this channel is a {@link PartialGroupDMChannel}.
+   * @returns {boolean}
+   */
+  isGroupDM() {
+    return this.type === ChannelType.GroupDM;
+  }
+
+  /**
+   * Indicates whether this channel is a {@link CategoryChannel}.
+   * @returns {boolean}
+   */
+  isCategory() {
+    return this.type === ChannelType.GuildCategory;
+  }
+
+  /**
+   * Indicates whether this channel is a {@link NewsChannel}.
+   * @returns {boolean}
+   */
+  isNews() {
+    return this.type === ChannelType.GuildNews;
+  }
+
+  /**
+   * Indicates whether this channel is a {@link StoreChannel}.
+   * @returns {boolean}
+   */
+  isStore() {
+    return this.type === ChannelType.GuildStore;
   }
 
   /**
@@ -123,14 +157,38 @@ class Channel extends Base {
     return ThreadChannelTypes.includes(this.type);
   }
 
+  /**
+   * Indicates whether this channel is a {@link StageChannel}.
+   * @returns {boolean}
+   */
+  isStage() {
+    return this.type === ChannelType.GuildStageVoice;
+  }
+
+  /**
+   * Indicates whether this channel is {@link TextBasedChannels text-based}.
+   * @returns {boolean}
+   */
+  isTextBased() {
+    return 'messages' in this;
+  }
+
+  /**
+   * Indicates whether this channel is {@link BaseGuildVoiceChannel voice-based}.
+   * @returns {boolean}
+   */
+  isVoiceBased() {
+    return 'bitrate' in this;
+  }
+
   static create(client, data, guild, { allowUnknownGuild, fromInteraction } = {}) {
     const Structures = require('../util/Structures');
     let channel;
     if (!data.guild_id && !guild) {
-      if ((data.recipients && data.type !== ChannelTypes.GROUP_DM) || data.type === ChannelTypes.DM) {
+      if ((data.recipients && data.type !== ChannelType.GroupDM) || data.type === ChannelType.DM) {
         const DMChannel = Structures.get('DMChannel');
         channel = new DMChannel(client, data);
-      } else if (data.type === ChannelTypes.GROUP_DM) {
+      } else if (data.type === ChannelType.GroupDM) {
         const PartialGroupDMChannel = Structures.get('PartialGroupDMChannel');
         channel = new PartialGroupDMChannel(client, data);
       }
@@ -139,39 +197,39 @@ class Channel extends Base {
 
       if (guild || allowUnknownGuild) {
         switch (data.type) {
-          case ChannelTypes.GUILD_TEXT: {
+          case ChannelType.GuildText: {
             const TextChannel = Structures.get('TextChannel');
             channel = new TextChannel(guild, data, client);
             break;
           }
-          case ChannelTypes.GUILD_VOICE: {
+          case ChannelType.GuildVoice: {
             const VoiceChannel = Structures.get('VoiceChannel');
             channel = new VoiceChannel(guild, data, client);
             break;
           }
-          case ChannelTypes.GUILD_CATEGORY: {
+          case ChannelType.GuildCategory: {
             const CategoryChannel = Structures.get('CategoryChannel');
             channel = new CategoryChannel(guild, data, client);
             break;
           }
-          case ChannelTypes.GUILD_NEWS: {
+          case ChannelType.GuildNews: {
             const NewsChannel = Structures.get('NewsChannel');
             channel = new NewsChannel(guild, data, client);
             break;
           }
-          case ChannelTypes.GUILD_STORE: {
+          case ChannelType.GuildStore: {
             const StoreChannel = Structures.get('StoreChannel');
             channel = new StoreChannel(guild, data, client);
             break;
           }
-          case ChannelTypes.GUILD_STAGE_VOICE: {
+          case ChannelType.GuildStageVoice: {
             const StageChannel = Structures.get('StageChannel');
             channel = new StageChannel(guild, data, client);
             break;
           }
-          case ChannelTypes.GUILD_NEWS_THREAD:
-          case ChannelTypes.GUILD_PUBLIC_THREAD:
-          case ChannelTypes.GUILD_PRIVATE_THREAD: {
+          case ChannelType.GuildNewsThread:
+          case ChannelType.GuildPublicThread:
+          case ChannelType.GuildPrivateThread: {
             const ThreadChannel = Structures.get('ThreadChannel');
             channel = new ThreadChannel(guild, data, client, fromInteraction);
             if (!allowUnknownGuild) channel.parent?.threads.cache.set(channel.id, channel);
@@ -189,7 +247,7 @@ class Channel extends Base {
   }
 }
 
-module.exports = Channel;
+exports.Channel = Channel;
 
 /**
  * @external APIChannel

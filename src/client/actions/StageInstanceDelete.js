@@ -12,7 +12,6 @@ class StageInstanceDeleteAction extends Action {
       const stageInstance = channel.guild.stageInstances._add(data);
       if (stageInstance) {
         channel.guild.stageInstances.cache.delete(stageInstance.id);
-        stageInstance.deleted = true;
 
         /**
          * Emitted whenever a stage instance is deleted.

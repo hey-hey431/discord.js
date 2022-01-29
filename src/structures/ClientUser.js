@@ -1,5 +1,6 @@
 'use strict';
 
+const { Routes } = require('discord-api-types/v9');
 const DataResolver = require('../util/DataResolver');
 const Structures = require('../util/Structures');
 
@@ -60,8 +61,9 @@ class ClientUser extends Structures.get('User') {
    */
   async edit(data) {
     if (typeof data.avatar !== 'undefined') data.avatar = await DataResolver.resolveImage(data.avatar);
-    const newData = await this.client.api.users('@me').patch({ data });
+    const newData = await this.client.rest.patch(Routes.user(), { body: data });
     this.client.token = newData.token;
+    this.client.rest.setToken(newData.token);
     const { updated } = this.client.actions.UserUpdate.handle(newData);
     return updated ?? this;
   }
@@ -163,7 +165,7 @@ class ClientUser extends Structures.get('User') {
    * @returns {ClientPresence}
    * @example
    * // Set the client user's activity
-   * client.user.setActivity('discord.js', { type: 'WATCHING' });
+   * client.user.setActivity('discord.js', { type: ActivityType.Watching });
    */
   setActivity(name, options = {}) {
     if (!name) return this.setPresence({ activities: [], shardId: options.shardId });

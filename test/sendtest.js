@@ -2,23 +2,25 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const process = require('node:process');
+const { setTimeout: sleep } = require('node:timers/promises');
 const util = require('node:util');
+const { GatewayIntentBits } = require('discord-api-types/v9');
 const fetch = require('node-fetch');
 const { owner, token } = require('./auth.js');
-const { Client, Intents, MessageAttachment, MessageEmbed } = require('../src');
+const { Client, MessageAttachment, Embed } = require('../src');
 
-const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 
 const buffer = l => fetch(l).then(res => res.buffer());
 const read = util.promisify(fs.readFile);
 const readStream = fs.createReadStream;
-const wait = util.promisify(setTimeout);
 
 const linkA = 'https://lolisafe.moe/iiDMtAXA.png';
 const linkB = 'https://lolisafe.moe/9hSpedPh.png';
 const fileA = path.join(__dirname, 'blobReach.png');
 
-const embed = () => new MessageEmbed();
+const embed = () => new Embed();
 const attach = (attachment, name) => new MessageAttachment(attachment, name);
 
 const tests = [
@@ -71,12 +73,6 @@ const tests = [
       embed: embed().setImage('attachment://two.png'),
       files: [attach(linkB, 'two.png')],
     }),
-  m =>
-    m.channel.send({
-      embed: embed()
-        .setImage('attachment://two.png')
-        .attachFiles([attach(linkB, 'two.png')]),
-    }),
   m => m.channel.send('x', attach(fileA)),
   m => m.channel.send({ files: [fileA] }),
   m => m.channel.send(attach(fileA)),
@@ -97,7 +93,7 @@ client.on('messageCreate', async message => {
     for (const [i, test] of tests.entries()) {
       await message.channel.send(`**#${i}**\n\`\`\`js\n${test.toString()}\`\`\``);
       await test(message).catch(e => message.channel.send(`Error!\n\`\`\`\n${e}\`\`\``));
-      await wait(1_000);
+      await sleep(1_000);
     }
     /* eslint-enable no-await-in-loop */
   } else if (match) {

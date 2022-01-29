@@ -5,14 +5,14 @@
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     // if true: conflicts with discord-api-types
-    "exactOptionalPropertyTypes": false,
+    // "exactOptionalPropertyTypes": false,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "strict": true,
-    "useUnknownInCatchVariables": true,
+    // "useUnknownInCatchVariables": true,
 
     // Modules
     "module": "CommonJS",
@@ -44,7 +44,7 @@
     "pretty": false,
 
     // Completeness
-    "skipLibCheck": false,
+    "skipLibCheck": true,
     "skipDefaultLibCheck": true
   }
 }

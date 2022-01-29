@@ -1,15 +1,18 @@
 'use strict';
 
+const process = require('node:process');
 const { Collection } = require('@discordjs/collection');
+const { ChannelType, Routes } = require('discord-api-types/v9');
 const CachedManager = require('./CachedManager');
 const ThreadManager = require('./ThreadManager');
 const { Error } = require('../errors');
 const GuildChannel = require('../structures/GuildChannel');
 const PermissionOverwrites = require('../structures/PermissionOverwrites');
 const ThreadChannel = require('../structures/ThreadChannel');
-const { ChannelTypes, ThreadChannelTypes } = require('../util/Constants');
+const { ThreadChannelTypes } = require('../util/Constants');
 
 let cacheWarningEmitted = false;
+let storeChannelDeprecationEmitted = false;
 
 /**
  * Manages API methods for GuildChannels and stores their cache.
@@ -20,8 +23,8 @@ class GuildChannelManager extends CachedManager {
     super(guild.client, GuildChannel, iterable);
     const defaultCaching =
       this._cache.constructor.name === 'Collection' ||
-      ((this._cache.maxSize === undefined || this._cache.maxSize === Infinity) &&
-        (this._cache.sweepFilter === undefined || this._cache.sweepFilter.isDefault));
+      this._cache.maxSize === undefined ||
+      this._cache.maxSize === Infinity;
     if (!cacheWarningEmitted && !defaultCaching) {
       cacheWarningEmitted = true;
       process.emitWarning(
@@ -110,11 +113,11 @@ class GuildChannelManager extends CachedManager {
    * @example
    * // Create a new channel with permission overwrites
    * guild.channels.create('new-voice', {
-   *   type: 'GUILD_VOICE',
+   *   type: ChannelType.GuildVoice,
    *   permissionOverwrites: [
    *      {
    *        id: message.author.id,
-   *        deny: [Permissions.FLAGS.VIEW_CHANNEL],
+   *        deny: [PermissionFlagsBits.ViewChannel],
    *     },
    *   ],
    * })
@@ -138,11 +141,20 @@ class GuildChannelManager extends CachedManager {
     parent &&= this.client.channels.resolveId(parent);
     permissionOverwrites &&= permissionOverwrites.map(o => PermissionOverwrites.resolve(o, this.guild));
 
-    const data = await this.client.api.guilds(this.guild.id).channels.post({
-      data: {
+    if (type === ChannelType.GuildStore && !storeChannelDeprecationEmitted) {
+      storeChannelDeprecationEmitted = true;
+      process.emitWarning(
+        // eslint-disable-next-line max-len
+        'Creating store channels is deprecated by Discord and will stop working in March 2022. Check the docs for more info.',
+        'DeprecationWarning',
+      );
+    }
+
+    const data = await this.client.rest.post(Routes.guildChannels(this.guild.id), {
+      body: {
         name,
         topic,
-        type: typeof type === 'number' ? type : ChannelTypes[type] ?? ChannelTypes.GUILD_TEXT,
+        type,
         nsfw,
         bitrate,
         user_limit: userLimit,
@@ -180,17 +192,33 @@ class GuildChannelManager extends CachedManager {
     }
 
     if (id) {
-      const data = await this.client.api.channels(id).get();
+      const data = await this.client.rest.get(Routes.channel(id));
       // Since this is the guild manager, throw if on a different guild
       if (this.guild.id !== data.guild_id) throw new Error('GUILD_CHANNEL_UNOWNED');
       return this.client.channels._add(data, this.guild, { cache });
     }
 
-    const data = await this.client.api.guilds(this.guild.id).channels.get();
+    const data = await this.client.rest.get(Routes.guildChannels(this.guild.id));
     const channels = new Collection();
     for (const channel of data) channels.set(channel.id, this.client.channels._add(channel, this.guild, { cache }));
     return channels;
   }
+
+  /**
+   * Data that can be resolved to give a Category Channel object. This can be:
+   * * A CategoryChannel object
+   * * A Snowflake
+   * @typedef {CategoryChannel|Snowflake} CategoryChannelResolvable
+   */
+
+  /**
+   * The data needed for updating a channel's position.
+   * @typedef {Object} ChannelPosition
+   * @property {GuildChannel|Snowflake} channel Channel to update
+   * @property {number} [position] New position for the channel
+   * @property {CategoryChannelResolvable} [parent] Parent channel for this channel
+   * @property {boolean} [lockPermissions] If the overwrites should be locked to the parents overwrites
+   */
 
   /**
    * Batch-updates the guild's channels' positions.
@@ -210,7 +238,7 @@ class GuildChannelManager extends CachedManager {
       parent_id: typeof r.parent !== 'undefined' ? this.channels.resolveId(r.parent) : undefined,
     }));
 
-    await this.client.api.guilds(this.guild.id).channels.patch({ data: channelPositions });
+    await this.client.rest.patch(Routes.guildChannels(this.guild.id), { body: channelPositions });
     return this.client.actions.GuildChannelsPositionUpdate.handle({
       guild_id: this.guild.id,
       channels: channelPositions,
@@ -228,7 +256,7 @@ class GuildChannelManager extends CachedManager {
    *   .catch(console.error);
    */
   async fetchActiveThreads(cache = true) {
-    const raw = await this.client.api.guilds(this.guild.id).threads.active.get();
+    const raw = await this.client.rest.get(Routes.guildActiveThreads(this.guild.id));
     return ThreadManager._mapThreads(raw, this.client, { guild: this.guild, cache });
   }
 }

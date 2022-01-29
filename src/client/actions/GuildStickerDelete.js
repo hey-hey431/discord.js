@@ -6,7 +6,6 @@ const { Events } = require('../../util/Constants');
 class GuildStickerDeleteAction extends Action {
   handle(sticker) {
     sticker.guild.stickers.cache.delete(sticker.id);
-    sticker.deleted = true;
     /**
      * Emitted whenever a custom sticker is deleted in a guild.
      * @event Client#stickerDelete

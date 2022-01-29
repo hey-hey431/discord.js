@@ -1,8 +1,8 @@
 'use strict';
 
 const { Collection } = require('@discordjs/collection');
+const { PermissionFlagsBits } = require('discord-api-types/v9');
 const GuildChannel = require('./GuildChannel');
-const Permissions = require('../util/Permissions');
 
 /**
  * Represents a voice-based guild channel on Discord.
@@ -68,8 +68,16 @@ class BaseGuildVoiceChannel extends GuildChannel {
    */
   get joinable() {
     if (!this.viewable) return false;
-    if (!this.permissionsFor(this.client.user).has(Permissions.FLAGS.CONNECT, false)) return false;
-    return true;
+    const permissions = this.permissionsFor(this.client.user);
+    if (!permissions) return false;
+
+    // This flag allows joining even if timed out
+    if (permissions.has(PermissionFlagsBits.Administrator, false)) return true;
+
+    return (
+      this.guild.me.communicationDisabledUntilTimestamp < Date.now() &&
+      permissions.has(PermissionFlagsBits.Connect, false)
+    );
   }
 
   /**

@@ -10,10 +10,6 @@ class ThreadDeleteAction extends Action {
 
     if (thread) {
       client.channels._remove(thread.id);
-      thread.deleted = true;
-      for (const message of thread.messages.cache.values()) {
-        message.deleted = true;
-      }
 
       /**
        * Emitted whenever a thread is deleted.

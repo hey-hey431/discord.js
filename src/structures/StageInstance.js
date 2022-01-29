@@ -1,8 +1,7 @@
 'use strict';
 
+const { DiscordSnowflake } = require('@sapphire/snowflake');
 const Base = require('./Base');
-const { PrivacyLevels } = require('../util/Constants');
-const SnowflakeUtil = require('../util/SnowflakeUtil');
 
 /**
  * Represents a stage instance.
@@ -17,12 +16,6 @@ class StageInstance extends Base {
      * @type {Snowflake}
      */
     this.id = data.id;
-
-    /**
-     * Whether the stage instance has been deleted
-     * @type {boolean}
-     */
-    this.deleted = false;
 
     this._patch(data);
   }
@@ -55,15 +48,16 @@ class StageInstance extends Base {
     if ('privacy_level' in data) {
       /**
        * The privacy level of the stage instance
-       * @type {PrivacyLevel}
+       * @type {StageInstancePrivacyLevel}
        */
-      this.privacyLevel = PrivacyLevels[data.privacy_level];
+      this.privacyLevel = data.privacy_level;
     }
 
     if ('discoverable_disabled' in data) {
       /**
        * Whether or not stage discovery is disabled
        * @type {?boolean}
+       * @deprecated See https://github.com/discord/discord-api-docs/pull/4296 for more information
        */
       this.discoverableDisabled = data.discoverable_disabled;
     } else {
@@ -115,7 +109,6 @@ class StageInstance extends Base {
   async delete() {
     await this.guild.stageInstances.delete(this.channelId);
     const clone = this._clone();
-    clone.deleted = true;
     return clone;
   }
 
@@ -139,7 +132,7 @@ class StageInstance extends Base {
    * @readonly
    */
   get createdTimestamp() {
-    return SnowflakeUtil.deconstruct(this.id).timestamp;
+    return DiscordSnowflake.timestampFrom(this.id);
   }
 
   /**
@@ -152,4 +145,4 @@ class StageInstance extends Base {
   }
 }
 
-module.exports = StageInstance;
+exports.StageInstance = StageInstance;

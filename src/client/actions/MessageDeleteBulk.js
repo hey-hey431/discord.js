@@ -10,7 +10,7 @@ class MessageDeleteBulkAction extends Action {
     const channel = client.channels.cache.get(data.channel_id);
 
     if (channel) {
-      if (!channel.isText()) return {};
+      if (!channel.isTextBased()) return {};
 
       const ids = data.ids;
       const messages = new Collection();
@@ -24,7 +24,6 @@ class MessageDeleteBulkAction extends Action {
           false,
         );
         if (message) {
-          message.deleted = true;
           messages.set(message.id, message);
           channel.messages.cache.delete(id);
         }

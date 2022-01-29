@@ -3,12 +3,11 @@
 const { Collection } = require('@discordjs/collection');
 const Collector = require('./interfaces/Collector');
 const { Events } = require('../util/Constants');
-const { InteractionTypes, MessageComponentTypes } = require('../util/Constants');
 
 /**
  * @typedef {CollectorOptions} InteractionCollectorOptions
  * @property {TextBasedChannels} [channel] The channel to listen to interactions from
- * @property {MessageComponentType} [componentType] The type of component to listen for
+ * @property {ComponentType} [componentType] The type of component to listen for
  * @property {Guild} [guild] The guild to listen to interactions from
  * @property {InteractionType} [interactionType] The type of interaction to listen for
  * @property {number} [max] The maximum total amount of interactions to collect
@@ -64,19 +63,13 @@ class InteractionCollector extends Collector {
      * The type of interaction to collect
      * @type {?InteractionType}
      */
-    this.interactionType =
-      typeof options.interactionType === 'number'
-        ? InteractionTypes[options.interactionType]
-        : options.interactionType ?? null;
+    this.interactionType = options.interactionType ?? null;
 
     /**
      * The type of component to collect
-     * @type {?MessageComponentType}
+     * @type {?ComponentType}
      */
-    this.componentType =
-      typeof options.componentType === 'number'
-        ? MessageComponentTypes[options.componentType]
-        : options.componentType ?? null;
+    this.componentType = options.componentType ?? null;
 
     /**
      * The users that have interacted with this collector
@@ -105,7 +98,9 @@ class InteractionCollector extends Collector {
 
     if (this.channelId) {
       this._handleChannelDeletion = this._handleChannelDeletion.bind(this);
+      this._handleThreadDeletion = this._handleThreadDeletion.bind(this);
       this.client.on(Events.CHANNEL_DELETE, this._handleChannelDeletion);
+      this.client.on(Events.THREAD_DELETE, this._handleThreadDeletion);
     }
 
     if (this.guildId) {
@@ -120,6 +115,7 @@ class InteractionCollector extends Collector {
       this.client.removeListener(Events.MESSAGE_DELETE, this._handleMessageDeletion);
       this.client.removeListener(Events.MESSAGE_BULK_DELETE, bulkDeleteListener);
       this.client.removeListener(Events.CHANNEL_DELETE, this._handleChannelDeletion);
+      this.client.removeListener(Events.THREAD_DELETE, this._handleThreadDeletion);
       this.client.removeListener(Events.GUILD_DELETE, this._handleGuildDeletion);
       this.client.decrementMaxListeners();
     });
@@ -212,8 +208,20 @@ class InteractionCollector extends Collector {
    * @returns {void}
    */
   _handleChannelDeletion(channel) {
-    if (channel.id === this.channelId) {
+    if (channel.id === this.channelId || channel.threads?.cache.has(this.channelId)) {
       this.stop('channelDelete');
+    }
+  }
+
+  /**
+   * Handles checking if the thread has been deleted, and if so, stops the collector with the reason 'threadDelete'.
+   * @private
+   * @param {ThreadChannel} thread The thread that was deleted
+   * @returns {void}
+   */
+  _handleThreadDeletion(thread) {
+    if (thread.id === this.channelId) {
+      this.stop('threadDelete');
     }
   }
 
