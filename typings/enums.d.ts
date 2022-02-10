@@ -93,6 +93,7 @@ export const enum InteractionResponseTypes {
   DEFERRED_MESSAGE_UPDATE = 6,
   UPDATE_MESSAGE = 7,
   APPLICATION_COMMAND_AUTOCOMPLETE_RESULT = 8,
+  MODAL = 9,
 }
 
 export const enum InteractionTypes {
@@ -100,6 +101,7 @@ export const enum InteractionTypes {
   APPLICATION_COMMAND = 2,
   MESSAGE_COMPONENT = 3,
   APPLICATION_COMMAND_AUTOCOMPLETE = 4,
+  MODAL_SUBMIT = 5,
 }
 
 export const enum InviteTargetType {
@@ -124,6 +126,12 @@ export const enum MessageComponentTypes {
   ACTION_ROW = 1,
   BUTTON = 2,
   SELECT_MENU = 3,
+  TEXT_INPUT = 4,
+}
+
+export const enum ModalComponentTypes {
+  ACTION_ROW = 1,
+  TEXT_INPUT = 4,
 }
 
 export const enum MFALevels {
@@ -164,6 +172,11 @@ export const enum StickerFormatTypes {
 export const enum StickerTypes {
   STANDARD = 1,
   GUILD = 2,
+}
+
+export const enum TextInputStyles {
+  SHORT = 1,
+  PARAGRAPH = 2,
 }
 
 export const enum VerificationLevels {

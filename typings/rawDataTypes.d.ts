@@ -76,7 +76,8 @@ import {
   RESTPostAPIWebhookWithTokenJSONBody,
   Snowflake,
 } from 'discord-api-types/v9';
-import { GuildChannel, Guild, PermissionOverwrites } from '.';
+import { Guild, GuildChannel, PermissionOverwrites } from '.';
+import type { InteractionTypes, MessageComponentTypes } from './enums';
 
 export type RawActivityData = GatewayActivity;
 
@@ -137,6 +138,26 @@ export type RawCommandInteractionData = APIApplicationCommandInteraction;
 export type RawMessageComponentInteractionData = APIMessageComponentInteraction;
 export type RawMessageButtonInteractionData = APIMessageButtonInteractionData;
 export type RawMessageSelectMenuInteractionData = APIMessageSelectMenuInteractionData;
+
+// TODO: Replace with discord-api-types definition
+export type RawTextInputComponentData = {
+  type: MessageComponentTypes.TEXT_INPUT;
+  custom_id: string;
+  value: string;
+};
+
+// TODO: Replace with discord-api-types definition
+export type RawModalActionRowComponentData = {
+  custom_id: string;
+  components: RawTextInputComponentData;
+};
+
+// TODO: Replace with discord-api-types definition
+export type RawModalSubmitInteractionData = {
+  custom_id: string;
+  type: InteractionTypes.MODAL_SUBMIT;
+  components: RawModalActionRowComponentData[];
+};
 
 export type RawInviteData =
   | APIExtendedInvite

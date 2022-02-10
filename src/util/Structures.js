@@ -128,6 +128,7 @@ const structures = {
   UserContextMenuInteraction: require('../structures/UserContextMenuInteraction'),
   AutocompleteInteraction: require('../structures/AutocompleteInteraction'),
   MessageComponentInteraction: require('../structures/MessageComponentInteraction'),
+  ModalSubmitInteraction: require('../structures/ModalSubmitInteraction'),
   StageInstance: require('../structures/StageInstance'),
 };
 

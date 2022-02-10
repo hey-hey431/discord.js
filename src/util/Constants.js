@@ -978,6 +978,7 @@ exports.ApplicationCommandPermissionTypes = createEnum([null, 'ROLE', 'USER']);
  * * APPLICATION_COMMAND
  * * MESSAGE_COMPONENT
  * * APPLICATION_COMMAND_AUTOCOMPLETE
+ * * MODAL_SUBMIT
  * @typedef {string} InteractionType
  * @see {@link https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object-interaction-type}
  */
@@ -987,6 +988,7 @@ exports.InteractionTypes = createEnum([
   'APPLICATION_COMMAND',
   'MESSAGE_COMPONENT',
   'APPLICATION_COMMAND_AUTOCOMPLETE',
+  'MODAL_SUBMIT',
 ]);
 
 /**
@@ -1010,6 +1012,7 @@ exports.InteractionResponseTypes = createEnum([
   'DEFERRED_MESSAGE_UPDATE',
   'UPDATE_MESSAGE',
   'APPLICATION_COMMAND_AUTOCOMPLETE_RESULT',
+  'MODAL',
 ]);
 /* eslint-enable max-len */
 
@@ -1021,7 +1024,7 @@ exports.InteractionResponseTypes = createEnum([
  * @typedef {string} MessageComponentType
  * @see {@link https://discord.com/developers/docs/interactions/message-components#component-object-component-types}
  */
-exports.MessageComponentTypes = createEnum([null, 'ACTION_ROW', 'BUTTON', 'SELECT_MENU']);
+exports.MessageComponentTypes = createEnum([null, 'ACTION_ROW', 'BUTTON', 'SELECT_MENU', 'TEXT_INPUT']);
 
 /**
  * The style of a message button
@@ -1063,6 +1066,15 @@ exports.NSFWLevels = createEnum(['DEFAULT', 'EXPLICIT', 'SAFE', 'AGE_RESTRICTED'
  * @see {@link https://discord.com/developers/docs/resources/stage-instance#stage-instance-object-privacy-level}
  */
 exports.PrivacyLevels = createEnum([null, 'PUBLIC', 'GUILD_ONLY']);
+
+/**
+ * The style of a text input component
+ * * SHORT
+ * * LONG
+ * @typedef {string} TextInputStyle
+ * @see {@link https://discord.com/developers/docs/interactions/message-components#text-inputs-text-input-styles}
+ */
+exports.TextInputStyles = createEnum([null, 'SHORT', 'PARAGRAPH']);
 
 /**
  * The premium tier (Server Boost level) of a guild:

@@ -53,6 +53,9 @@ class InteractionCreateAction extends Action {
       case InteractionTypes.APPLICATION_COMMAND_AUTOCOMPLETE:
         InteractionType = Structures.get('AutocompleteInteraction');
         break;
+      case InteractionTypes.MODAL_SUBMIT:
+        InteractionType = Structures.get('ModalSubmitInteraction');
+        break;
       default:
         client.emit(Events.DEBUG, `[INTERACTION] Received interaction with unknown type: ${data.type}`);
         return;

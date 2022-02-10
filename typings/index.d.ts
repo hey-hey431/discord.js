@@ -71,6 +71,7 @@ import {
   MessageButtonStyles,
   MessageComponentTypes,
   MessageTypes,
+  ModalComponentTypes,
   MFALevels,
   NSFWLevels,
   OverwriteTypes,
@@ -78,6 +79,7 @@ import {
   PrivacyLevels,
   StickerFormatTypes,
   StickerTypes,
+  TextInputStyles,
   VerificationLevels,
   WebhookTypes,
 } from './enums';
@@ -113,6 +115,8 @@ import {
   RawMessagePayloadData,
   RawMessageReactionData,
   RawMessageSelectMenuInteractionData,
+  RawModalActionRowComponentData,
+  RawModalSubmitInteractionData,
   RawOAuth2GuildData,
   RawPartialGroupDMChannelData,
   RawPartialMessageData,
@@ -344,6 +348,7 @@ export abstract class BaseCommandInteraction<Cached extends CacheType = CacheTyp
   public editReply(options: string | MessagePayload | WebhookEditMessageOptions): Promise<GuildCacheMessage<Cached>>;
   public fetchReply(): Promise<GuildCacheMessage<Cached>>;
   public followUp(options: string | MessagePayload | InteractionReplyOptions): Promise<GuildCacheMessage<Cached>>;
+  public presentModal(modal: Modal | ModalOptions): Promise<void>;
   public reply(options: InteractionReplyOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
   public reply(options: string | MessagePayload | InteractionReplyOptions): Promise<void>;
   private transformOption(
@@ -1239,6 +1244,7 @@ export class Interaction<Cached extends CacheType = CacheType> extends Base {
   public isUserContextMenu(): this is UserContextMenuInteraction<Cached>;
   public isMessageContextMenu(): this is MessageContextMenuInteraction<Cached>;
   public isMessageComponent(): this is MessageComponentInteraction<Cached>;
+  public isModalSubmit(): this is ModalSubmitInteraction<Cached>;
   public isSelectMenu(): this is SelectMenuInteraction<Cached>;
 }
 
@@ -1352,6 +1358,7 @@ export interface StringMappedInteractionTypes<Cached extends CacheType = CacheTy
   BUTTON: ButtonInteraction<Cached>;
   SELECT_MENU: SelectMenuInteraction<Cached>;
   ACTION_ROW: MessageComponentInteraction<Cached>;
+  TEXT_INPUT: ModalSubmitInteraction<Cached>;
 }
 
 export interface EnumMappedInteractionTypes<Cached extends CacheType = CacheType> {
@@ -1439,21 +1446,16 @@ export class Message<Cached extends boolean = boolean> extends Base {
   public inGuild(): this is Message<true> & this;
 }
 
-export class MessageActionRow extends BaseMessageComponent {
-  public constructor(data?: MessageActionRow | MessageActionRowOptions | APIActionRowComponent);
+export class MessageActionRow<
+  T extends MessageActionRowComponent | ModalActionRowComponent = MessageActionRowComponent,
+  U = T extends ModalActionRowComponent ? ModalActionRowComponentResolvable : MessageActionRowComponentResolvable,
+> extends BaseMessageComponent {
+  public constructor(data?: MessageActionRow<T> | MessageActionRowOptions<U> | APIActionRowComponent);
   public type: 'ACTION_ROW';
-  public components: MessageActionRowComponent[];
-  public addComponents(
-    ...components: MessageActionRowComponentResolvable[] | MessageActionRowComponentResolvable[][]
-  ): this;
-  public setComponents(
-    ...components: MessageActionRowComponentResolvable[] | MessageActionRowComponentResolvable[][]
-  ): this;
-  public spliceComponents(
-    index: number,
-    deleteCount: number,
-    ...components: MessageActionRowComponentResolvable[] | MessageActionRowComponentResolvable[][]
-  ): this;
+  public components: T[];
+  public addComponents(...components: U[] | U[][]): this;
+  public setComponents(...components: U[] | U[][]): this;
+  public spliceComponents(index: number, deleteCount: number, ...components: U[] | U[][]): this;
   public toJSON(): APIActionRowComponent;
 }
 
@@ -1538,6 +1540,7 @@ export class MessageComponentInteraction<Cached extends CacheType = CacheType> e
   public editReply(options: string | MessagePayload | WebhookEditMessageOptions): Promise<GuildCacheMessage<Cached>>;
   public fetchReply(): Promise<GuildCacheMessage<Cached>>;
   public followUp(options: string | MessagePayload | InteractionReplyOptions): Promise<GuildCacheMessage<Cached>>;
+  public presentModal(modal: Modal | ModalOptions): Promise<void>;
   public reply(options: InteractionReplyOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
   public reply(options: string | MessagePayload | InteractionReplyOptions): Promise<void>;
   public update(options: InteractionUpdateOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
@@ -1697,6 +1700,117 @@ export class MessageSelectMenu extends BaseMessageComponent {
     ...options: MessageSelectOptionData[] | MessageSelectOptionData[][]
   ): this;
   public toJSON(): APISelectMenuComponent;
+}
+
+export class Modal {
+  public constructor(data?: Modal | ModalOptions);
+  public components: MessageActionRow<ModalActionRowComponent>[];
+  public customId: string;
+  public title: string;
+  public addComponents(
+    ...components: (
+      | MessageActionRow<ModalActionRowComponent>
+      | (Required<BaseMessageComponentOptions> & MessageActionRowOptions<ModalActionRowComponentResolvable>)
+    )[]
+  ): this;
+  public setComponents(
+    ...components: (
+      | MessageActionRow<ModalActionRowComponent>
+      | (Required<BaseMessageComponentOptions> & MessageActionRowOptions<ModalActionRowComponentResolvable>)
+    )[]
+  ): this;
+  public setCustomId(customId: string): this;
+  public spliceComponents(
+    index: number,
+    deleteCount: number,
+    ...components: (
+      | MessageActionRow<ModalActionRowComponent>
+      | (Required<BaseMessageComponentOptions> & MessageActionRowOptions<ModalActionRowComponentResolvable>)
+    )[]
+  ): this;
+  public setTitle(title: string): this;
+  public toJSON(): RawModalSubmitInteractionData;
+}
+
+export class ModalSubmitFieldsResolver {
+  constructor(components: PartialModalActionRow[]);
+  private readonly _fields: PartialTextInputData[];
+  public getField(customId: string): PartialTextInputData;
+  public getTextInputValue(customId: string): string;
+}
+
+export class ModalSubmitInteraction<Cached extends CacheType = CacheType> extends Interaction<Cached> {
+  protected constructor(client: Client, data: RawModalSubmitInteractionData);
+  public customId: string;
+  public components: PartialModalActionRow[];
+  public fields: ModalSubmitFieldsResolver;
+  public getTextInputValue(customId: string): string;
+  public reply(options: InteractionReplyOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
+  public reply(options: string | MessagePayload | InteractionReplyOptions): Promise<void>;
+  public deleteReply(): Promise<void>;
+  public editReply(options: string | MessagePayload | WebhookEditMessageOptions): Promise<GuildCacheMessage<Cached>>;
+  public deferReply(options: InteractionDeferReplyOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
+  public deferReply(options?: InteractionDeferReplyOptions): Promise<void>;
+  public fetchReply(): Promise<GuildCacheMessage<Cached>>;
+  public followUp(options: string | MessagePayload | InteractionReplyOptions): Promise<GuildCacheMessage<Cached>>;
+  public inGuild(): this is ModalSubmitInteraction<'present'>;
+  public inCachedGuild(): this is ModalSubmitInteraction<'cached'>;
+  public inRawGuild(): this is ModalSubmitInteraction<'raw'>;
+}
+export class Modal {
+  public constructor(data?: Modal | ModalOptions);
+  public components: MessageActionRow<ModalActionRowComponent>[];
+  public customId: string;
+  public title: string;
+  public addComponents(
+    ...components: (
+      | MessageActionRow<ModalActionRowComponent>
+      | (Required<BaseMessageComponentOptions> & MessageActionRowOptions<ModalActionRowComponentResolvable>)
+    )[]
+  ): this;
+  public setComponents(
+    ...components: (
+      | MessageActionRow<ModalActionRowComponent>
+      | (Required<BaseMessageComponentOptions> & MessageActionRowOptions<ModalActionRowComponentResolvable>)
+    )[]
+  ): this;
+  public setCustomId(customId: string): this;
+  public spliceComponents(
+    index: number,
+    deleteCount: number,
+    ...components: (
+      | MessageActionRow<ModalActionRowComponent>
+      | (Required<BaseMessageComponentOptions> & MessageActionRowOptions<ModalActionRowComponentResolvable>)
+    )[]
+  ): this;
+  public setTitle(title: string): this;
+  public toJSON(): RawModalSubmitInteractionData;
+}
+
+export class ModalSubmitFieldsResolver {
+  constructor(components: PartialModalActionRow[]);
+  private readonly _fields: PartialTextInputData[];
+  public getField(customId: string): PartialTextInputData;
+  public getTextInputValue(customId: string): string;
+}
+
+export class ModalSubmitInteraction<Cached extends CacheType = CacheType> extends Interaction<Cached> {
+  protected constructor(client: Client, data: RawModalSubmitInteractionData);
+  public customId: string;
+  public components: PartialModalActionRow[];
+  public fields: ModalSubmitFieldsResolver;
+  public getTextInputValue(customId: string): string;
+  public reply(options: InteractionReplyOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
+  public reply(options: string | MessagePayload | InteractionReplyOptions): Promise<void>;
+  public deleteReply(): Promise<void>;
+  public editReply(options: string | MessagePayload | WebhookEditMessageOptions): Promise<GuildCacheMessage<Cached>>;
+  public deferReply(options: InteractionDeferReplyOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
+  public deferReply(options?: InteractionDeferReplyOptions): Promise<void>;
+  public fetchReply(): Promise<GuildCacheMessage<Cached>>;
+  public followUp(options: string | MessagePayload | InteractionReplyOptions): Promise<GuildCacheMessage<Cached>>;
+  public inGuild(): this is ModalSubmitInteraction<'present'>;
+  public inCachedGuild(): this is ModalSubmitInteraction<'cached'>;
+  public inRawGuild(): this is ModalSubmitInteraction<'raw'>;
 }
 
 export class NewsChannel extends BaseGuildTextChannel {
@@ -2106,6 +2220,28 @@ export class TextChannel extends BaseGuildTextChannel {
   public threads: ThreadManager<AllowedThreadTypeForTextChannel>;
   public type: 'GUILD_TEXT';
   public setRateLimitPerUser(rateLimitPerUser: number, reason?: string): Promise<TextChannel>;
+}
+
+export class TextInputComponent extends BaseMessageComponent {
+  public constructor(data?: TextInputComponent | TextInputComponentOptions);
+  public customId: string | null;
+  public label: string | null;
+  public required: boolean;
+  public maxLength: number | null;
+  public minLength: number | null;
+  public placeholder: string | null;
+  public style: TextInputStyle;
+  public value: string | null;
+  public setCustomId(customId: string): this;
+  public setLabel(label: string): this;
+  public setRequired(required?: boolean): this;
+  public setMaxLength(maxLength: number): this;
+  public setMinLength(minLength: number): this;
+  public setPlaceholder(placeholder: string): this;
+  public setStyle(style: TextInputStyleResolvable): this;
+  public setValue(value: string): this;
+  public toJSON(): unknown;
+  public static resolveStyle(style: TextInputStyleResolvable): TextInputStyle;
 }
 
 export class ThreadChannel extends TextBasedChannel(Channel) {
@@ -2644,6 +2780,8 @@ export const Constants: {
   InteractionResponseTypes: EnumHolder<typeof InteractionResponseTypes>;
   MessageComponentTypes: EnumHolder<typeof MessageComponentTypes>;
   MessageButtonStyles: EnumHolder<typeof MessageButtonStyles>;
+  ModalComponentTypes: EnumHolder<typeof ModalComponentTypes>;
+  TextInputStyles: EnumHolder<typeof TextInputStyles>;
   MFALevels: EnumHolder<typeof MFALevels>;
   NSFWLevels: EnumHolder<typeof NSFWLevels>;
   PrivacyLevels: EnumHolder<typeof PrivacyLevels>;
@@ -4133,6 +4271,7 @@ interface Extendable {
   ContextMenuInteraction: typeof ContextMenuInteraction;
   AutocompleteInteraction: typeof AutocompleteInteraction;
   MessageComponentInteraction: typeof MessageComponentInteraction;
+  ModalSubmitInteraction: typeof ModalSubmitInteraction;
   StageInstance: typeof StageInstance;
 }
 
@@ -4602,8 +4741,15 @@ export type MessageActionRowComponentOptions =
 
 export type MessageActionRowComponentResolvable = MessageActionRowComponent | MessageActionRowComponentOptions;
 
-export interface MessageActionRowOptions extends BaseMessageComponentOptions {
-  components: MessageActionRowComponentResolvable[];
+export type ModalActionRowComponent = TextInputComponent;
+export type ModalActionRowComponentOptions = TextInputComponentOptions;
+export type ModalActionRowComponentResolvable = ModalActionRowComponent | ModalActionRowComponentOptions;
+export interface MessageActionRowOptions<
+  T extends
+    | MessageActionRowComponentResolvable
+    | ModalActionRowComponentResolvable = MessageActionRowComponentResolvable,
+> extends BaseMessageComponentOptions {
+  components: T[];
 }
 
 export interface MessageActivity {
@@ -4640,15 +4786,13 @@ export interface MessageCollectorOptions extends CollectorOptions<[Message]> {
 
 export type MessageComponent = BaseMessageComponent | MessageActionRow | MessageButton | MessageSelectMenu;
 
-export type MessageComponentCollectorOptions<T extends MessageComponentInteraction> = Omit<
+export type MessageComponentCollectorOptions<T extends MessageComponentInteraction | ModalSubmitInteraction> = Omit<
   InteractionCollectorOptions<T>,
   'channel' | 'message' | 'guild' | 'interactionType'
 >;
 
-export type MessageChannelComponentCollectorOptions<T extends MessageComponentInteraction> = Omit<
-  InteractionCollectorOptions<T>,
-  'channel' | 'guild' | 'interactionType'
->;
+export type MessageChannelComponentCollectorOptions<T extends MessageComponentInteraction | ModalSubmitInteraction> =
+  Omit<InteractionCollectorOptions<T>, 'channel' | 'guild' | 'interactionType'>;
 
 export type MessageComponentOptions =
   | BaseMessageComponentOptions
@@ -4830,6 +4974,14 @@ export type MessageType = keyof typeof MessageTypes;
 
 export type MFALevel = keyof typeof MFALevels;
 
+export interface ModalOptions {
+  components:
+    | MessageActionRow<ModalActionRowComponent>[]
+    | MessageActionRowOptions<ModalActionRowComponentResolvable>[];
+  customId: string;
+  title: string;
+}
+
 export interface MultipleShardRespawnOptions {
   shardDelay?: number;
   respawnDelay?: number;
@@ -4854,6 +5006,17 @@ export interface OverwriteData {
 export type OverwriteResolvable = PermissionOverwrites | OverwriteData;
 
 export type OverwriteType = 'member' | 'role';
+
+export interface PartialModalActionRow {
+  type: MessageComponentType;
+  components: PartialTextInputData[];
+}
+export interface PartialTextInputData {
+  value: string;
+  // TODO: use dapi types
+  type: MessageComponentType;
+  customId: string;
+}
 
 export type PermissionFlags = Record<PermissionString, bigint>;
 
@@ -5148,6 +5311,23 @@ export interface LimitedCollectionOptions<K, V> {
 export type TextBasedChannels = PartialDMChannel | DMChannel | TextChannel | NewsChannel | ThreadChannel;
 
 export type TextBasedChannelTypes = TextBasedChannels['type'];
+
+export interface TextInputComponentOptions extends BaseMessageComponentOptions {
+  customId?: string;
+  label?: string;
+  minLength?: number;
+  maxLength?: number;
+  placeholder?: string;
+  required?: boolean;
+  style?: TextInputStyleResolvable;
+  value?: string;
+}
+export type TextInputStyle = keyof typeof TextInputStyles;
+export type TextInputStyleResolvable = TextInputStyle | TextInputStyles;
+export interface IntegrationAccount {
+  id: string | Snowflake;
+  name: string;
+}
 
 export type TextChannelResolvable = Snowflake | TextChannel;
 
