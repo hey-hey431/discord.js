@@ -41,7 +41,6 @@ export const enum ChannelTypes {
   GROUP_DM = 3,
   GUILD_CATEGORY = 4,
   GUILD_NEWS = 5,
-  GUILD_STORE = 6,
   UNKNOWN = 7,
   GUILD_NEWS_THREAD = 10,
   GUILD_PUBLIC_THREAD = 11,

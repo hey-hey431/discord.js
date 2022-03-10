@@ -9,7 +9,6 @@
  * * **`VoiceChannel`**
  * * **`CategoryChannel`**
  * * **`NewsChannel`**
- * * **`StoreChannel`**
  * * **`StageChannel`**
  * * **`ThreadChannel`**
  * * **`GuildMember`**
@@ -106,7 +105,6 @@ const structures = {
   VoiceChannel: require('../structures/VoiceChannel'),
   CategoryChannel: require('../structures/CategoryChannel'),
   NewsChannel: require('../structures/NewsChannel'),
-  StoreChannel: require('../structures/StoreChannel'),
   StageChannel: require('../structures/StageChannel'),
   ThreadChannel: require('../structures/ThreadChannel'),
   GuildMember: require('../structures/GuildMember'),

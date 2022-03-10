@@ -246,14 +246,6 @@ class Guild extends AnonymousGuild {
       this.premiumTier = PremiumTiers[data.premium_tier];
     }
 
-    if ('premium_subscription_count' in data) {
-      /**
-       * The total number of boosts for this server
-       * @type {?number}
-       */
-      this.premiumSubscriptionCount = data.premium_subscription_count;
-    }
-
     if ('widget_enabled' in data) {
       /**
        * Whether widget images are enabled on this guild
@@ -887,7 +879,7 @@ class Guild extends AnonymousGuild {
    * Welcome channel data
    * @typedef {Object} WelcomeChannelData
    * @property {string} description The description to show for this welcome channel
-   * @property {TextChannel|NewsChannel|StoreChannel|Snowflake} channel The channel to link for this welcome channel
+   * @property {TextChannel|NewsChannel|Snowflake} channel The channel to link for this welcome channel
    * @property {EmojiIdentifierResolvable} [emoji] The emoji to display for this welcome channel
    */
 
@@ -1390,8 +1382,8 @@ class Guild extends AnonymousGuild {
     return Util.discordSort(
       this.channels.cache.filter(
         c =>
-          (['GUILD_TEXT', 'GUILD_NEWS', 'GUILD_STORE'].includes(channel.type)
-            ? ['GUILD_TEXT', 'GUILD_NEWS', 'GUILD_STORE'].includes(c.type)
+          (['GUILD_TEXT', 'GUILD_NEWS'].includes(channel.type)
+            ? ['GUILD_TEXT', 'GUILD_NEWS'].includes(c.type)
             : c.type === channel.type) &&
           (category || c.parent === channel.parent),
       ),

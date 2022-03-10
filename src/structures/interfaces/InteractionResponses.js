@@ -229,7 +229,9 @@ class InteractionResponses {
    * @param {Modal|ModalOptions} modal The modal to present
    * @returns {Promise<void>}
    */
-  async presentModal(modal) {
+  async showModal(modal) {
+    if (this.deferred || this.replied) throw new Error('INTERACTION_ALREADY_REPLIED');
+
     const _modal = modal instanceof Modal ? modal : new Modal(modal);
     await this.client.api.interactions(this.id, this.token).callback.post({
       data: {
@@ -237,6 +239,7 @@ class InteractionResponses {
         data: _modal.toJSON(),
       },
     });
+    this.replied = true;
   }
 
   static applyToClass(structure, ignore = []) {
@@ -249,7 +252,7 @@ class InteractionResponses {
       'followUp',
       'deferUpdate',
       'update',
-      'presentModal',
+      'showModal',
     ];
 
     for (const prop of props) {

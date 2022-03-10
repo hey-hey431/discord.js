@@ -1,6 +1,7 @@
 'use strict';
 
 const Interaction = require('./Interaction');
+const InteractionWebhook = require('./InteractionWebhook');
 const ModalSubmitFieldsResolver = require('./ModalSubmitFieldsResolver');
 const InteractionResponses = require('./interfaces/InteractionResponses');
 const { MessageComponentTypes } = require('../util/Constants');
@@ -39,28 +40,40 @@ class ModalSubmitInteraction extends Interaction {
       })) ?? [];
 
     /**
+     * The message associated with this interaction
+     * @type {Message|APIMessage|null}
+     */
+    this.message = data.message ? this.channel?.messages._add(data.message) ?? data.message : null;
+
+    /**
      * The fields within the modal
      * @type {ModalSubmitFieldsResolver}
      */
     this.fields = new ModalSubmitFieldsResolver(this.components);
-  }
 
-  /**
-   * Get the value submitted in a text input component
-   * @param {string} customId Custom id of the text input component
-   * @returns {string}
-   */
-  getTextInputValue(customId) {
-    for (const row of this.components) {
-      const field = row.components.find(
-        c => c.customId === customId && c.type === MessageComponentTypes[MessageComponentTypes.TEXT_INPUT],
-      );
+    /**
+     * Whether the reply to this interaction has been deferred
+     * @type {boolean}
+     */
+    this.deferred = false;
 
-      if (field) {
-        return field.value;
-      }
-    }
-    return null;
+    /**
+     * Whether the reply to this interaction is ephemeral
+     * @type {?boolean}
+     */
+    this.ephemeral = null;
+
+    /**
+     * Whether this interaction has already been replied to
+     * @type {boolean}
+     */
+    this.replied = false;
+
+    /**
+     * An associated interaction webhook, can be used to further interact with this interaction
+     * @type {InteractionWebhook}
+     */
+    this.webhook = new InteractionWebhook(this.client, this.applicationId, this.token);
   }
 
   /**
@@ -84,8 +97,10 @@ class ModalSubmitInteraction extends Interaction {
   editReply() {}
   deleteReply() {}
   followUp() {}
+  update() {}
+  deferUpdate() {}
 }
 
-InteractionResponses.applyToClass(ModalSubmitInteraction, ['deferUpdate', 'update', 'presentModal']);
+InteractionResponses.applyToClass(ModalSubmitInteraction, ['showModal']);
 
 module.exports = ModalSubmitInteraction;

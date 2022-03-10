@@ -22,6 +22,7 @@ import {
 import { Collection } from '@discordjs/collection';
 import {
   APIActionRowComponent,
+  APIActionRowComponentTypes,
   APIApplicationCommand,
   APIApplicationCommandInteractionData,
   APIApplicationCommandOption,
@@ -35,7 +36,9 @@ import {
   APIInteractionDataResolvedGuildMember,
   APIInteractionGuildMember,
   APIMessage,
+  APIMessageActionRowComponent,
   APIMessageComponent,
+  APIModalActionRowComponent,
   APIOverwrite,
   APIPartialChannel,
   APIPartialEmoji,
@@ -43,6 +46,7 @@ import {
   APIRole,
   APISelectMenuComponent,
   APITemplateSerializedSourceGuild,
+  APITextInputComponent,
   APIUser,
   GatewayVoiceServerUpdateDispatchData,
   GatewayVoiceStateUpdateDispatchData,
@@ -115,7 +119,6 @@ import {
   RawMessagePayloadData,
   RawMessageReactionData,
   RawMessageSelectMenuInteractionData,
-  RawModalActionRowComponentData,
   RawModalSubmitInteractionData,
   RawOAuth2GuildData,
   RawPartialGroupDMChannelData,
@@ -130,6 +133,7 @@ import {
   RawStickerPackData,
   RawTeamData,
   RawTeamMemberData,
+  RawTextInputComponentData,
   RawThreadChannelData,
   RawThreadMemberData,
   RawTypingData,
@@ -184,6 +188,7 @@ export abstract class AnonymousGuild extends BaseGuild {
   public banner: string | null;
   public description: string | null;
   public nsfwLevel: NSFWLevel;
+  public premiumSubscriptionCount: number | null;
   public splash: string | null;
   public vanityURLCode: string | null;
   public verificationLevel: VerificationLevel;
@@ -348,7 +353,7 @@ export abstract class BaseCommandInteraction<Cached extends CacheType = CacheTyp
   public editReply(options: string | MessagePayload | WebhookEditMessageOptions): Promise<GuildCacheMessage<Cached>>;
   public fetchReply(): Promise<GuildCacheMessage<Cached>>;
   public followUp(options: string | MessagePayload | InteractionReplyOptions): Promise<GuildCacheMessage<Cached>>;
-  public presentModal(modal: Modal | ModalOptions): Promise<void>;
+  public showModal(modal: Modal | ModalOptions): Promise<void>;
   public reply(options: InteractionReplyOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
   public reply(options: string | MessagePayload | InteractionReplyOptions): Promise<void>;
   private transformOption(
@@ -472,16 +477,12 @@ export class CategoryChannel extends GuildChannel {
   ): Promise<NewsChannel>;
   public createChannel(
     name: string,
-    options: CategoryCreateChannelOptions & { type: 'GUILD_STORE' },
-  ): Promise<StoreChannel>;
-  public createChannel(
-    name: string,
     options: CategoryCreateChannelOptions & { type: 'GUILD_STAGE_VOICE' },
   ): Promise<StageChannel>;
   public createChannel(
     name: string,
     options: CategoryCreateChannelOptions,
-  ): Promise<TextChannel | VoiceChannel | NewsChannel | StoreChannel | StageChannel>;
+  ): Promise<TextChannel | VoiceChannel | NewsChannel | StageChannel>;
 }
 
 export type CategoryChannelResolvable = Snowflake | CategoryChannel;
@@ -866,7 +867,6 @@ export class Guild extends AnonymousGuild {
   public mfaLevel: MFALevel;
   public ownerId: Snowflake;
   public preferredLocale: string;
-  public premiumSubscriptionCount: number | null;
   public premiumProgressBarEnabled: boolean;
   public premiumTier: PremiumTier;
   public presences: PresenceManager;
@@ -1450,13 +1450,15 @@ export class MessageActionRow<
   T extends MessageActionRowComponent | ModalActionRowComponent = MessageActionRowComponent,
   U = T extends ModalActionRowComponent ? ModalActionRowComponentResolvable : MessageActionRowComponentResolvable,
 > extends BaseMessageComponent {
-  public constructor(data?: MessageActionRow<T> | MessageActionRowOptions<U> | APIActionRowComponent);
+  public constructor(
+    data?: MessageActionRow<T> | MessageActionRowOptions<U> | APIActionRowComponent<APIActionRowComponentTypes>,
+  );
   public type: 'ACTION_ROW';
   public components: T[];
   public addComponents(...components: U[] | U[][]): this;
   public setComponents(...components: U[] | U[][]): this;
   public spliceComponents(index: number, deleteCount: number, ...components: U[] | U[][]): this;
-  public toJSON(): APIActionRowComponent;
+  public toJSON(): APIActionRowComponent<APIActionRowComponentTypes>;
 }
 
 export class MessageAttachment {
@@ -1519,7 +1521,9 @@ export class MessageComponentInteraction<Cached extends CacheType = CacheType> e
   public readonly component: CacheTypeReducer<
     Cached,
     MessageActionRowComponent,
-    Exclude<APIMessageComponent, APIActionRowComponent>
+    Exclude<APIMessageComponent, APIActionRowComponent<APIMessageActionRowComponent>>,
+    MessageActionRowComponent | Exclude<APIMessageComponent, APIActionRowComponent<APIMessageActionRowComponent>>,
+    MessageActionRowComponent | Exclude<APIMessageComponent, APIActionRowComponent<APIMessageActionRowComponent>>
   > | null;
   public componentType: Exclude<MessageComponentType, 'ACTION_ROW'>;
   public customId: string;
@@ -1540,7 +1544,7 @@ export class MessageComponentInteraction<Cached extends CacheType = CacheType> e
   public editReply(options: string | MessagePayload | WebhookEditMessageOptions): Promise<GuildCacheMessage<Cached>>;
   public fetchReply(): Promise<GuildCacheMessage<Cached>>;
   public followUp(options: string | MessagePayload | InteractionReplyOptions): Promise<GuildCacheMessage<Cached>>;
-  public presentModal(modal: Modal | ModalOptions): Promise<void>;
+  public showModal(modal: Modal | ModalOptions): Promise<void>;
   public reply(options: InteractionReplyOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
   public reply(options: string | MessagePayload | InteractionReplyOptions): Promise<void>;
   public update(options: InteractionUpdateOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
@@ -1705,8 +1709,8 @@ export class MessageSelectMenu extends BaseMessageComponent {
 export class Modal {
   public constructor(data?: Modal | ModalOptions);
   public components: MessageActionRow<ModalActionRowComponent>[];
-  public customId: string;
-  public title: string;
+  public customId: string | null;
+  public title: string | null;
   public addComponents(
     ...components: (
       | MessageActionRow<ModalActionRowComponent>
@@ -1739,78 +1743,43 @@ export class ModalSubmitFieldsResolver {
   public getTextInputValue(customId: string): string;
 }
 
-export class ModalSubmitInteraction<Cached extends CacheType = CacheType> extends Interaction<Cached> {
-  protected constructor(client: Client, data: RawModalSubmitInteractionData);
-  public customId: string;
-  public components: PartialModalActionRow[];
-  public fields: ModalSubmitFieldsResolver;
-  public getTextInputValue(customId: string): string;
-  public reply(options: InteractionReplyOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
-  public reply(options: string | MessagePayload | InteractionReplyOptions): Promise<void>;
-  public deleteReply(): Promise<void>;
-  public editReply(options: string | MessagePayload | WebhookEditMessageOptions): Promise<GuildCacheMessage<Cached>>;
-  public deferReply(options: InteractionDeferReplyOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
-  public deferReply(options?: InteractionDeferReplyOptions): Promise<void>;
-  public fetchReply(): Promise<GuildCacheMessage<Cached>>;
-  public followUp(options: string | MessagePayload | InteractionReplyOptions): Promise<GuildCacheMessage<Cached>>;
-  public inGuild(): this is ModalSubmitInteraction<'present'>;
-  public inCachedGuild(): this is ModalSubmitInteraction<'cached'>;
-  public inRawGuild(): this is ModalSubmitInteraction<'raw'>;
-}
-export class Modal {
-  public constructor(data?: Modal | ModalOptions);
-  public components: MessageActionRow<ModalActionRowComponent>[];
-  public customId: string;
-  public title: string;
-  public addComponents(
-    ...components: (
-      | MessageActionRow<ModalActionRowComponent>
-      | (Required<BaseMessageComponentOptions> & MessageActionRowOptions<ModalActionRowComponentResolvable>)
-    )[]
-  ): this;
-  public setComponents(
-    ...components: (
-      | MessageActionRow<ModalActionRowComponent>
-      | (Required<BaseMessageComponentOptions> & MessageActionRowOptions<ModalActionRowComponentResolvable>)
-    )[]
-  ): this;
-  public setCustomId(customId: string): this;
-  public spliceComponents(
-    index: number,
-    deleteCount: number,
-    ...components: (
-      | MessageActionRow<ModalActionRowComponent>
-      | (Required<BaseMessageComponentOptions> & MessageActionRowOptions<ModalActionRowComponentResolvable>)
-    )[]
-  ): this;
-  public setTitle(title: string): this;
-  public toJSON(): RawModalSubmitInteractionData;
-}
-
-export class ModalSubmitFieldsResolver {
-  constructor(components: PartialModalActionRow[]);
-  private readonly _fields: PartialTextInputData[];
-  public getField(customId: string): PartialTextInputData;
-  public getTextInputValue(customId: string): string;
+export interface ModalMessageModalSubmitInteraction<Cached extends CacheType = CacheType>
+  extends ModalSubmitInteraction<Cached> {
+  message: GuildCacheMessage<Cached> | null;
+  update(options: InteractionUpdateOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
+  update(options: string | MessagePayload | InteractionUpdateOptions): Promise<void>;
+  deferUpdate(options: InteractionDeferUpdateOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
+  deferUpdate(options?: InteractionDeferUpdateOptions): Promise<void>;
+  inGuild(): this is ModalMessageModalSubmitInteraction<'present'>;
+  inCachedGuild(): this is ModalMessageModalSubmitInteraction<'cached'>;
+  inRawGuild(): this is ModalMessageModalSubmitInteraction<'raw'>;
 }
 
 export class ModalSubmitInteraction<Cached extends CacheType = CacheType> extends Interaction<Cached> {
   protected constructor(client: Client, data: RawModalSubmitInteractionData);
   public customId: string;
   public components: PartialModalActionRow[];
+  public deferred: boolean;
+  public ephemeral: boolean | null;
   public fields: ModalSubmitFieldsResolver;
-  public getTextInputValue(customId: string): string;
+  public replied: false;
+  public webhook: InteractionWebhook;
   public reply(options: InteractionReplyOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
   public reply(options: string | MessagePayload | InteractionReplyOptions): Promise<void>;
   public deleteReply(): Promise<void>;
   public editReply(options: string | MessagePayload | WebhookEditMessageOptions): Promise<GuildCacheMessage<Cached>>;
   public deferReply(options: InteractionDeferReplyOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
   public deferReply(options?: InteractionDeferReplyOptions): Promise<void>;
+  public deferUpdate(options: InteractionDeferUpdateOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
+  public deferUpdate(options?: InteractionDeferUpdateOptions): Promise<void>;
   public fetchReply(): Promise<GuildCacheMessage<Cached>>;
   public followUp(options: string | MessagePayload | InteractionReplyOptions): Promise<GuildCacheMessage<Cached>>;
   public inGuild(): this is ModalSubmitInteraction<'present'>;
   public inCachedGuild(): this is ModalSubmitInteraction<'cached'>;
   public inRawGuild(): this is ModalSubmitInteraction<'raw'>;
+  public isFromMessage(): this is ModalMessageModalSubmitInteraction<Cached>;
+  public update(options: InteractionUpdateOptions & { fetchReply: true }): Promise<GuildCacheMessage<Cached>>;
+  public update(options: string | MessagePayload | InteractionUpdateOptions): Promise<void>;
 }
 
 export class NewsChannel extends BaseGuildTextChannel {
@@ -2160,14 +2129,6 @@ export class StickerPack extends Base {
   public bannerURL(options?: StaticImageURLOptions): string;
 }
 
-export class StoreChannel extends GuildChannel {
-  public constructor(guild: Guild, data?: RawGuildChannelData, client?: Client);
-  public createInvite(options?: CreateInviteOptions): Promise<Invite>;
-  public fetchInvites(cache?: boolean): Promise<Collection<string, Invite>>;
-  public nsfw: boolean;
-  public type: 'GUILD_STORE';
-}
-
 export class Structures extends null {
   public constructor();
   public static get<K extends keyof Extendable>(structure: K): Extendable[K];
@@ -2240,7 +2201,7 @@ export class TextInputComponent extends BaseMessageComponent {
   public setPlaceholder(placeholder: string): this;
   public setStyle(style: TextInputStyleResolvable): this;
   public setValue(value: string): this;
-  public toJSON(): unknown;
+  public toJSON(): RawTextInputComponentData;
   public static resolveStyle(style: TextInputStyleResolvable): TextInputStyle;
 }
 
@@ -2641,7 +2602,7 @@ export class WelcomeChannel extends Base {
   public channelId: Snowflake;
   public guild: Guild | InviteGuild;
   public description: string;
-  public readonly channel: TextChannel | NewsChannel | StoreChannel | null;
+  public readonly channel: TextChannel | NewsChannel | null;
   public readonly emoji: GuildEmoji | Emoji;
 }
 
@@ -2951,7 +2912,6 @@ export class GuildChannelManager extends CachedManager<
   ): Promise<CategoryChannel>;
   public create(name: string, options?: GuildChannelCreateOptions & { type?: 'GUILD_TEXT' }): Promise<TextChannel>;
   public create(name: string, options: GuildChannelCreateOptions & { type: 'GUILD_NEWS' }): Promise<NewsChannel>;
-  public create(name: string, options: GuildChannelCreateOptions & { type: 'GUILD_STORE' }): Promise<StoreChannel>;
   public create(
     name: string,
     options: GuildChannelCreateOptions & { type: 'GUILD_STAGE_VOICE' },
@@ -2959,17 +2919,15 @@ export class GuildChannelManager extends CachedManager<
   public create(
     name: string,
     options: GuildChannelCreateOptions,
-  ): Promise<TextChannel | VoiceChannel | CategoryChannel | NewsChannel | StoreChannel | StageChannel>;
+  ): Promise<TextChannel | VoiceChannel | CategoryChannel | NewsChannel | StageChannel>;
   public fetch(
     id: Snowflake,
     options?: BaseFetchOptions,
-  ): Promise<TextChannel | VoiceChannel | CategoryChannel | NewsChannel | StoreChannel | StageChannel | null>;
+  ): Promise<TextChannel | VoiceChannel | CategoryChannel | NewsChannel | StageChannel | null>;
   public fetch(
     id?: undefined,
     options?: BaseFetchOptions,
-  ): Promise<
-    Collection<Snowflake, TextChannel | VoiceChannel | CategoryChannel | NewsChannel | StoreChannel | StageChannel>
-  >;
+  ): Promise<Collection<Snowflake, TextChannel | VoiceChannel | CategoryChannel | NewsChannel | StageChannel>>;
   public setPositions(channelPositions: readonly ChannelPosition[]): Promise<Guild>;
   public fetchActiveThreads(cache?: boolean): Promise<FetchedThreads>;
 }
@@ -4253,7 +4211,6 @@ interface Extendable {
   VoiceChannel: typeof VoiceChannel;
   CategoryChannel: typeof CategoryChannel;
   NewsChannel: typeof NewsChannel;
-  StoreChannel: typeof StoreChannel;
   ThreadChannel: typeof ThreadChannel;
   GuildMember: typeof GuildMember;
   ThreadMember: typeof ThreadMember;
@@ -4680,13 +4637,7 @@ export interface InviteGenerationOptions {
   scopes: InviteScope[];
 }
 
-export type GuildInvitableChannelResolvable =
-  | TextChannel
-  | VoiceChannel
-  | NewsChannel
-  | StoreChannel
-  | StageChannel
-  | Snowflake;
+export type GuildInvitableChannelResolvable = TextChannel | VoiceChannel | NewsChannel | StageChannel | Snowflake;
 
 export interface CreateInviteOptions {
   temporary?: boolean;
@@ -4739,11 +4690,17 @@ export type MessageActionRowComponentOptions =
   | (Required<BaseMessageComponentOptions> & MessageButtonOptions)
   | (Required<BaseMessageComponentOptions> & MessageSelectMenuOptions);
 
-export type MessageActionRowComponentResolvable = MessageActionRowComponent | MessageActionRowComponentOptions;
+export type MessageActionRowComponentResolvable =
+  | MessageActionRowComponent
+  | MessageActionRowComponentOptions
+  | APIMessageActionRowComponent;
 
 export type ModalActionRowComponent = TextInputComponent;
 export type ModalActionRowComponentOptions = TextInputComponentOptions;
-export type ModalActionRowComponentResolvable = ModalActionRowComponent | ModalActionRowComponentOptions;
+export type ModalActionRowComponentResolvable =
+  | ModalActionRowComponent
+  | ModalActionRowComponentOptions
+  | APIModalActionRowComponent;
 export interface MessageActionRowOptions<
   T extends
     | MessageActionRowComponentResolvable
@@ -5097,7 +5054,6 @@ export interface PartialChannelData {
     | 'DM'
     | 'GROUP_DM'
     | 'GUILD_NEWS'
-    | 'GUILD_STORE'
     | 'UNKNOWN'
     | 'GUILD_NEWS_THREAD'
     | 'GUILD_PUBLIC_THREAD'
@@ -5452,7 +5408,7 @@ export interface WidgetChannel {
 
 export interface WelcomeChannelData {
   description: string;
-  channel: TextChannel | NewsChannel | StoreChannel | Snowflake;
+  channel: TextChannel | NewsChannel | Snowflake;
   emoji?: EmojiIdentifierResolvable;
 }
 

@@ -465,7 +465,6 @@ exports.ActivityTypes = createEnum(['PLAYING', 'STREAMING', 'LISTENING', 'WATCHI
  * * `GROUP_DM` - a group DM channel
  * * `GUILD_CATEGORY` - a guild category channel
  * * `GUILD_NEWS` - a guild news channel
- * * `GUILD_STORE` - a guild store channel
  * * `GUILD_NEWS_THREAD` - a guild news channel's public thread channel
  * * `GUILD_PUBLIC_THREAD` - a guild text channel's public thread channel
  * * `GUILD_PRIVATE_THREAD` - a guild text channel's private thread channel
@@ -481,8 +480,7 @@ exports.ChannelTypes = createEnum([
   'GROUP_DM',
   'GUILD_CATEGORY',
   'GUILD_NEWS',
-  'GUILD_STORE',
-  ...Array(3).fill(null),
+  ...Array(4).fill(null),
   // 10
   'GUILD_NEWS_THREAD',
   'GUILD_PUBLIC_THREAD',
@@ -1070,7 +1068,7 @@ exports.PrivacyLevels = createEnum([null, 'PUBLIC', 'GUILD_ONLY']);
 /**
  * The style of a text input component
  * * SHORT
- * * LONG
+ * * PARAGRAPH
  * @typedef {string} TextInputStyle
  * @see {@link https://discord.com/developers/docs/interactions/message-components#text-inputs-text-input-styles}
  */
