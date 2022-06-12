@@ -117,11 +117,11 @@ class MessageEmbed {
      */
     this.thumbnail = data.thumbnail
       ? {
-          url: data.thumbnail.url,
-          proxyURL: data.thumbnail.proxyURL ?? data.thumbnail.proxy_url,
-          height: data.thumbnail.height,
-          width: data.thumbnail.width,
-        }
+        url: data.thumbnail.url,
+        proxyURL: data.thumbnail.proxyURL ?? data.thumbnail.proxy_url,
+        height: data.thumbnail.height,
+        width: data.thumbnail.width,
+      }
       : null;
 
     /**
@@ -139,11 +139,11 @@ class MessageEmbed {
      */
     this.image = data.image
       ? {
-          url: data.image.url,
-          proxyURL: data.image.proxyURL ?? data.image.proxy_url,
-          height: data.image.height,
-          width: data.image.width,
-        }
+        url: data.image.url,
+        proxyURL: data.image.proxyURL ?? data.image.proxy_url,
+        height: data.image.height,
+        width: data.image.width,
+      }
       : null;
 
     /**
@@ -162,11 +162,11 @@ class MessageEmbed {
      */
     this.video = data.video
       ? {
-          url: data.video.url,
-          proxyURL: data.video.proxyURL ?? data.video.proxy_url,
-          height: data.video.height,
-          width: data.video.width,
-        }
+        url: data.video.url,
+        proxyURL: data.video.proxyURL ?? data.video.proxy_url,
+        height: data.video.height,
+        width: data.video.width,
+      }
       : null;
 
     /**
@@ -184,11 +184,11 @@ class MessageEmbed {
      */
     this.author = data.author
       ? {
-          name: data.author.name,
-          url: data.author.url,
-          iconURL: data.author.iconURL ?? data.author.icon_url,
-          proxyIconURL: data.author.proxyIconURL ?? data.author.proxy_icon_url,
-        }
+        name: data.author.name,
+        url: data.author.url,
+        iconURL: data.author.iconURL ?? data.author.icon_url,
+        proxyIconURL: data.author.proxyIconURL ?? data.author.proxy_icon_url,
+      }
       : null;
 
     /**
@@ -204,9 +204,9 @@ class MessageEmbed {
      */
     this.provider = data.provider
       ? {
-          name: data.provider.name,
-          url: data.provider.name,
-        }
+        name: data.provider.name,
+        url: data.provider.name,
+      }
       : null;
 
     /**
@@ -223,10 +223,10 @@ class MessageEmbed {
      */
     this.footer = data.footer
       ? {
-          text: data.footer.text,
-          iconURL: data.footer.iconURL ?? data.footer.icon_url,
-          proxyIconURL: data.footer.proxyIconURL ?? data.footer.proxy_icon_url,
-        }
+        text: data.footer.text,
+        iconURL: data.footer.iconURL ?? data.footer.icon_url,
+        proxyIconURL: data.footer.proxyIconURL ?? data.footer.proxy_icon_url,
+      }
       : null;
   }
 
@@ -374,13 +374,9 @@ class MessageEmbed {
     }
 
     if (typeof options === 'string') {
-      if (
-        !deprecationEmittedForSetAuthor &&
-        (typeof deprecatedIconURL !== 'undefined' || typeof deprecatedURL !== 'undefined')
-      ) {
+      if (!deprecationEmittedForSetAuthor) {
         process.emitWarning(
-          // eslint-disable-next-line max-len
-          "Passing strings for the URL or the icon's URL for MessageEmbed#setAuthor is deprecated. Pass a sole object instead.",
+          'Passing strings for MessageEmbed#setAuthor is deprecated. Pass a sole object instead.',
           'DeprecationWarning',
         );
 
@@ -421,7 +417,26 @@ class MessageEmbed {
    * @param {string} [iconURL] The icon URL of the footer
    * @returns {MessageEmbed}
    */
-  setFooter(text, iconURL) {
+  setFooter(options, deprecatedIconURL) {
+    if (options === null) {
+      this.footer = {};
+      return this;
+    }
+
+    if (typeof options === 'string') {
+      if (!deprecationEmittedForSetFooter) {
+        process.emitWarning(
+          'Passing strings for MessageEmbed#setFooter is deprecated. Pass a sole object instead.',
+          'DeprecationWarning',
+        );
+
+        deprecationEmittedForSetFooter = true;
+      }
+
+      options = { text: options, iconURL: deprecatedIconURL };
+    }
+
+    const { text, iconURL } = options;
     this.footer = { text: Util.verifyString(text, RangeError, 'EMBED_FOOTER_TEXT'), iconURL };
     return this;
   }
@@ -512,6 +527,7 @@ class MessageEmbed {
    * @param {boolean} [inline=false] Set the field to display inline
    * @returns {EmbedField}
    */
+
   static normalizeField(name, value, inline = false) {
     return {
       name: Util.verifyString(name, RangeError, 'EMBED_FIELD_NAME', false),
